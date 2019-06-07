@@ -4,7 +4,7 @@ A little tool to check if a person's computer is setup as expected with tooling 
 ## Usage
 Run the following command
 ```bash
-npx fs-webdev/checkFrontierSetup
+npx fs-webdev/checkSetup
 ```
 
 This script will go through and verify that you have valid versions of node and npm, 
