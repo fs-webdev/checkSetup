@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+const fs = require('fs')
+const os = require('os')
+const path = require('path')
 const axios = require('axios')
 const netrc = require('netrc')()
 const { execSync } = require('child_process')
@@ -8,6 +11,8 @@ const { TIP, ERROR, ISSUE, WARNING, SUCCESS_MESSAGE } = require('./colorStrings'
 
 const MINIMUM_RECOMMENDED_NODE_VERSION = 10
 const MINIMUM_RECOMMENDED_NPM_VERSION = 5
+
+const artifactoryUrl = '@fs:registry=https://familysearch.jfrog.io/familysearch/api/npm/fs-npm-prod-virtual/'
 
 performAllChecks()
 
@@ -29,10 +34,16 @@ async function performAllChecks() {
 function checkArtifactoryAccess() {
   const artifactoryErrorMessage = `${ISSUE}
       Unable to access a module published to artifactory.
-      Follow the instructions here for more info https://www.familysearch.org/frontier/docs/#/start/setup#setting-up-artifactory`
+      Follow the instructions here for more info https://www.familysearch.org/frontier/docs/getting-started/setup#setting-up-artifactory`
 
   console.log('Checking ~/.npmrc file and npm access for @fs scoped modules')
   try {
+    const npmrcFile = fs.readFileSync(path.join(os.homedir(), '.npmrc'), 'utf8')
+    if (!npmrcFile.includes(artifactoryUrl)) {
+      return `\n${ISSUE}
+      Your npmrc file needs to be setup with the FamilySearch artifactory instance.\n${artifactoryErrorMessage}`
+    }
+
     const checkMySetupOutput = execSync('npx @fs/check-my-setup --npm-check', { encoding: 'utf8' })
     if (!checkMySetupOutput.includes('is working great!')) {
       return artifactoryErrorMessage
