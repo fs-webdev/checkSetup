@@ -12,7 +12,7 @@ const { TIP, ERROR, ISSUE, WARNING, SUCCESS_MESSAGE } = require('./colorStrings'
 const MINIMUM_RECOMMENDED_NODE_VERSION = 10
 const MINIMUM_RECOMMENDED_NPM_VERSION = 5
 
-const artifactoryUrl = '@fs:registry=https://familysearch.jfrog.io/familysearch/api/npm/fs-npm-prod-virtual/'
+const artifactoryUrl = '@fs:registry=https://familysearch.jfrog.io/artifactory/api/npm/fs-npm-prod-virtual/'
 
 performAllChecks()
 
