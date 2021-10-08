@@ -21,7 +21,7 @@
   },
   "homepage": "https://github.com/fs-webdev/checkFrontierSetup#readme",
   "dependencies": {
-    "axios": "^0.19.0",
+    "axios": "^0.22.0",
     "netrc": "^0.1.4"
   },
   "devDependencies": {}
