@@ -9,8 +9,8 @@ const { execSync } = require('child_process')
 
 const { TIP, ERROR, ISSUE, WARNING, SUCCESS_MESSAGE } = require('./colorStrings')
 
-const MINIMUM_RECOMMENDED_NODE_VERSION = 10
-const MINIMUM_RECOMMENDED_NPM_VERSION = 5
+const MINIMUM_RECOMMENDED_NODE_VERSION = 14
+const MINIMUM_RECOMMENDED_NPM_VERSION = 6
 
 const artifactoryUrl = '@fs:registry=https://familysearch.jfrog.io/artifactory/api/npm/fs-npm-prod-virtual/'
 
@@ -118,7 +118,7 @@ function checkNpmVersion() {
     }
     if (major === 6 && minor === 9) {
       return `${ISSUE}
-      There is a known bug with npm v6.9. You need to run 'npm i -g npm@6.8.0'`
+      There is a known bug with npm v6.9. You need to run 'npm i -g npm@6.14'`
     }
   } catch (err) {
     return `${ERROR}
