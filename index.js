@@ -9,8 +9,8 @@ const { execSync } = require('child_process')
 
 const { TIP, ERROR, ISSUE, WARNING, SUCCESS_MESSAGE } = require('./colorStrings')
 
-const [, , privateRepo] = process.argv
-const rawDataGitHubUrl = `https://raw.githubusercontent.com/fs-webdev/${privateRepo || 'zion'}/master/package.json`
+const [, , privateRepo = 'zion'] = process.argv
+const rawDataGitHubUrl = `https://raw.githubusercontent.com/fs-webdev/${privateRepo}/master/package.json`
 
 const MINIMUM_RECOMMENDED_NODE_VERSION = 14
 const MINIMUM_RECOMMENDED_NPM_VERSION = 6
@@ -62,7 +62,8 @@ function checkNvmVersion() {
   console.log('Checking for nvm usage')
   if (!process.execPath.includes('/.nvm/')) {
     return `${TIP}
-    We highly recommend using nvm to install and switch between versions of node. More info here https://github.com/creationix/nvm`
+    We highly recommend using nvm to install and switch between versions of node. More info here https://github.com/creationix/nvm
+`
   }
   console.log('Using nvm, good work\n')
   return ''
@@ -101,8 +102,9 @@ async function checkNetrcConfig() {
     }
   } catch (err) {
     return `${ERROR}
-    An error occurred when trying to get data from a private repo on github.com. Check the following error message, and contact frontier core if necessary;
-    ${err.message}`
+    An error occurred when trying to get data from the private repo "fs-webdev/${privateRepo}" on github.com.
+    Check the following error message, and contact frontier core if necessary:
+      ${err.message}`
   }
   console.log('~/.netrc file appears valid\n')
   return ''
