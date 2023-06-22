@@ -1,6 +1,6 @@
 {
   "name": "check-setup",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A little tool to check if a person's computer is setup as expected with tooling and access they need.",
   "main": "index.js",
   "bin": {

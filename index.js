@@ -9,6 +9,9 @@ const { execSync } = require('child_process')
 
 const { TIP, ERROR, ISSUE, WARNING, SUCCESS_MESSAGE } = require('./colorStrings')
 
+const [, , privateRepo] = process.argv
+const rawDataGitHubUrl = `https://raw.githubusercontent.com/fs-webdev/${privateRepo || 'zion'}/master/package.json`
+
 const MINIMUM_RECOMMENDED_NODE_VERSION = 14
 const MINIMUM_RECOMMENDED_NPM_VERSION = 6
 
@@ -80,8 +83,7 @@ async function checkNetrcConfig() {
   }
 
   try {
-    const rawDataUrl = `https://raw.githubusercontent.com/fs-webdev/zion/master/package.json`
-    const data = await axios.get(rawDataUrl, {
+    const data = await axios.get(rawDataGitHubUrl, {
       headers: {
         Authorization: `token ${githubData.login}`,
         Accept: 'application/vnd.github.v3+json',
