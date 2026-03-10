@@ -12,8 +12,8 @@ const { TIP, ERROR, ISSUE, WARNING, SUCCESS_MESSAGE } = require('./colorStrings'
 const [, , privateRepo = 'zion'] = process.argv
 const rawDataGitHubUrl = `https://raw.githubusercontent.com/fs-webdev/${privateRepo}/master/package.json`
 
-const MINIMUM_RECOMMENDED_NODE_VERSION = 20
-const MINIMUM_RECOMMENDED_NPM_VERSION = 10
+const MINIMUM_RECOMMENDED_NODE_VERSION = 24
+const MINIMUM_RECOMMENDED_NPM_VERSION = 11
 
 const artifactoryUrl = '@fs:registry=https://familysearch.jfrog.io/artifactory/api/npm/fs-npm-prod-virtual/'
 
