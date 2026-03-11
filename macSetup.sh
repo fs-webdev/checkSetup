@@ -297,8 +297,7 @@ phase_3_git_config() {
       {
         echo ""
         echo "machine github.com"
-        echo "  login $GIT_EMAIL"
-        echo "  password $GITHUB_TOKEN"
+        echo "  login $GITHUB_TOKEN"
       } >>"$HOME/.netrc"
       chmod 600 "$HOME/.netrc"
       print_done "~/.netrc updated with github.com credentials"
