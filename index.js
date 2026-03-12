@@ -16,6 +16,7 @@ const MINIMUM_RECOMMENDED_NODE_VERSION = 24
 const MINIMUM_RECOMMENDED_NPM_VERSION = 11
 
 const artifactoryUrl = '@fs:registry=https://familysearch.jfrog.io/artifactory/api/npm/fs-npm-prod-virtual/'
+const isMacOS = process.platform === 'darwin'
 
 performAllChecks()
 
@@ -147,6 +148,11 @@ function checkNodeVersion() {
 }
 
 function checkHomebrew() {
+  if (!isMacOS) {
+    console.log('Skipping homebrew check (macOS only)\n')
+    return ''
+  }
+
   console.log('Checking for homebrew')
   const command = 'brew --version'
   try {
@@ -160,6 +166,11 @@ function checkHomebrew() {
 }
 
 function checkGitHubCli() {
+  if (!isMacOS) {
+    console.log('Skipping GitHub CLI check (macOS only)\n')
+    return ''
+  }
+
   console.log('Checking for GitHub CLI')
   const command = 'gh --version'
   try {

@@ -569,7 +569,7 @@ phase_7_homebrew() {
   print_header "Phase 7: Homebrew"
 
   if command -v brew &>/dev/null; then
-    print_skip "Homebrew already installed ($(brew --version | head -1))"
+    print_skip "Homebrew already installed ($(brew --version 2>/dev/null | head -1 || echo 'version unknown'))"
     PHASES_SKIPPED+=("Phase 7: Homebrew")
     return 0
   fi
@@ -612,7 +612,7 @@ phase_8_github_cli() {
 
   # Check if gh is already installed
   if command -v gh &>/dev/null; then
-    print_skip "GitHub CLI (gh) already installed ($(gh --version | head -1))"
+    print_skip "GitHub CLI (gh) already installed ($(gh --version 2>/dev/null | head -1 || echo 'version unknown'))"
     PHASES_SKIPPED+=("Phase 8: GitHub CLI")
     return 0
   fi
