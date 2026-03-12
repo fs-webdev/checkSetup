@@ -562,56 +562,85 @@ phase_6_frontier_cli() {
 }
 
 # =============================================================================
-# PHASE 7: OPTIONAL TOOLS
+# PHASE 7: HOMEBREW
 # =============================================================================
 
-phase_7_optional() {
-  print_header "Phase 7: Optional Tools"
+phase_7_homebrew() {
+  print_header "Phase 7: Homebrew"
 
-  # ── Homebrew ─────────────────────────────────────────────────────────────
   if command -v brew &>/dev/null; then
     print_skip "Homebrew already installed ($(brew --version | head -1))"
-    PHASES_SKIPPED+=("Phase 7a: Homebrew")
-  else
-    echo ""
-    print_info "Homebrew is the recommended package manager for macOS developer tools."
-    if ask_yes_no "Install Homebrew?"; then
-      print_step "Installing Homebrew..."
-      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    PHASES_SKIPPED+=("Phase 7: Homebrew")
+    return 0
+  fi
 
-      # Apple Silicon path fix
-      if [[ -x "/opt/homebrew/bin/brew" ]]; then
-        eval "$(/opt/homebrew/bin/brew shellenv)"
-        print_done "Homebrew (Apple Silicon) path configured for this session"
-        # Persist to .zshrc
-        local zshrc="$HOME/.zshrc"
-        if ! grep -q 'opt/homebrew/bin/brew shellenv' "$zshrc" 2>/dev/null; then
-          echo "" >>"$zshrc"
-          echo '# Homebrew (Apple Silicon)' >>"$zshrc"
-          echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >>"$zshrc"
-          print_done "Homebrew path added to ~/.zshrc"
-        fi
-      fi
+  print_step "Installing Homebrew..."
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-      print_done "Homebrew installed"
-      PHASES_COMPLETED+=("Phase 7a: Homebrew")
-    else
-      print_info "Skipping Homebrew installation"
-      PHASES_SKIPPED+=("Phase 7a: Homebrew (declined)")
+  # Apple Silicon path fix
+  if [[ -x "/opt/homebrew/bin/brew" ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+    print_done "Homebrew (Apple Silicon) path configured for this session"
+    # Persist to .zshrc
+    local zshrc="$HOME/.zshrc"
+    if ! grep -q 'opt/homebrew/bin/brew shellenv' "$zshrc" 2>/dev/null; then
+      echo "" >>"$zshrc"
+      echo '# Homebrew (Apple Silicon)' >>"$zshrc"
+      echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >>"$zshrc"
+      print_done "Homebrew path added to ~/.zshrc"
     fi
   fi
+
+  print_done "Homebrew installed"
+  PHASES_COMPLETED+=("Phase 7: Homebrew")
+}
+
+# =============================================================================
+# PHASE 8: GITHUB CLI TOOL
+# =============================================================================
+
+
+phase_8_github_cli() {
+  print_header "Phase 8: GitHub CLI Tool (gh)"
+
+  # Homebrew is required for GitHub CLI installation
+  if ! command -v brew &>/dev/null; then
+    print_warn "Homebrew not found — cannot install GitHub CLI. This indicates Phase 7 may have failed."
+    PHASES_SKIPPED+=("Phase 8: GitHub CLI (Homebrew not found)")
+    return 0
+  fi
+
+  # Check if gh is already installed
+  if command -v gh &>/dev/null; then
+    print_skip "GitHub CLI (gh) already installed ($(gh --version | head -1))"
+    PHASES_SKIPPED+=("Phase 8: GitHub CLI")
+    return 0
+  fi
+
+  print_step "Installing GitHub CLI..."
+  brew install gh
+  print_done "GitHub CLI installed"
+  PHASES_COMPLETED+=("Phase 8: GitHub CLI")
+}
+
+# =============================================================================
+# PHASE 9: OPTIONAL TOOLS
+# =============================================================================
+
+phase_9_optional() {
+  print_header "Phase 9: Optional Tools"
 
   # ── Watchman ─────────────────────────────────────────────────────────────
   if command -v watchman &>/dev/null; then
     print_skip "Watchman already installed ($(watchman --version 2>/dev/null || echo 'version unknown'))"
-    PHASES_SKIPPED+=("Phase 7b: Watchman")
+    PHASES_SKIPPED+=("Phase 9: Watchman")
   else
     echo ""
     print_info "Watchman provides fast file-watching for Metro bundler (React Native / Frontier)."
     if ask_yes_no "Install Watchman via Homebrew?"; then
       if ! command -v brew &>/dev/null; then
         print_warn "Homebrew not found — cannot install Watchman. Install Homebrew first."
-        PHASES_SKIPPED+=("Phase 7b: Watchman (no Homebrew)")
+        PHASES_SKIPPED+=("Phase 9: Watchman")
       else
         print_step "Installing Watchman..."
         brew install watchman
@@ -621,11 +650,11 @@ phase_7_optional() {
         print_info "If you see permission errors, go to:"
         print_info "  System Settings → Privacy & Security → Full Disk Access"
         print_info "  and enable Watchman (or your terminal app)."
-        PHASES_COMPLETED+=("Phase 7b: Watchman")
+        PHASES_COMPLETED+=("Phase 9: Watchman")
       fi
     else
       print_info "Skipping Watchman installation"
-      PHASES_SKIPPED+=("Phase 7b: Watchman (declined)")
+      PHASES_SKIPPED+=("Phase 9: Watchman (declined)")
     fi
   fi
 }
@@ -694,7 +723,9 @@ main() {
   phase_4_nvm_and_node
   phase_5_artifactory
   phase_6_frontier_cli
-  phase_7_optional
+  phase_7_homebrew
+  phase_8_github_cli
+  phase_9_optional
   print_summary
 }
 
