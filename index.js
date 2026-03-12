@@ -16,6 +16,7 @@ const MINIMUM_RECOMMENDED_NODE_VERSION = 24
 const MINIMUM_RECOMMENDED_NPM_VERSION = 11
 
 const artifactoryUrl = '@fs:registry=https://familysearch.jfrog.io/artifactory/api/npm/fs-npm-prod-virtual/'
+const isMacOS = process.platform === 'darwin'
 
 performAllChecks()
 
@@ -26,6 +27,8 @@ async function performAllChecks() {
   errorMessage += checkNvmVersion()
   errorMessage += checkArtifactoryAccess()
   errorMessage += await checkNetrcConfig()
+  errorMessage += checkHomebrew()
+  errorMessage += checkGitHubCli()
 
   if (errorMessage === '') {
     console.log('\n', SUCCESS_MESSAGE)
@@ -141,5 +144,41 @@ function checkNodeVersion() {
     You are using node version ${major}, but ${MINIMUM_RECOMMENDED_NODE_VERSION} is the minimum version we support`
   }
   console.log('node version: ', nodeVersion, '\n')
+  return ''
+}
+
+function checkHomebrew() {
+  if (!isMacOS) {
+    console.log('Skipping homebrew check (macOS only)\n')
+    return ''
+  }
+
+  console.log('Checking for homebrew')
+  const command = 'brew --version'
+  try {
+    const brewVersion = execSync(command, { encoding: 'utf8' })
+    console.log('homebrew version: ', brewVersion, '\n')
+  } catch (err) {
+    return `\n${ISSUE}
+    Homebrew is required for managing packages on Mac. You can install it by running: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
+  }
+  return ''
+}
+
+function checkGitHubCli() {
+  if (!isMacOS) {
+    console.log('Skipping GitHub CLI check (macOS only)\n')
+    return ''
+  }
+
+  console.log('Checking for GitHub CLI')
+  const command = 'gh --version'
+  try {
+    const ghVersion = execSync(command, { encoding: 'utf8' })
+    console.log('GitHub CLI version: ', ghVersion, '\n')
+  } catch (err) {
+    return `\n${ISSUE}
+    GitHub CLI is required to interact with GitHub from your terminal. You can install it with homebrew using "brew install gh"`
+  }
   return ''
 }
