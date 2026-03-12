@@ -591,6 +591,13 @@ phase_7_homebrew() {
     fi
   fi
 
+  # Verify Homebrew is now available on PATH
+  if ! command -v brew &>/dev/null; then
+    print_error "Homebrew installation completed but 'brew' is not on your PATH."
+    print_info "You may need to restart your shell or run: eval \"\$(/opt/homebrew/bin/brew shellenv)\""
+    exit 1
+  fi
+
   print_done "Homebrew installed"
   PHASES_COMPLETED+=("Phase 7: Homebrew")
 }
@@ -640,7 +647,7 @@ phase_9_optional() {
     if ask_yes_no "Install Watchman via Homebrew?"; then
       if ! command -v brew &>/dev/null; then
         print_warn "Homebrew not found — cannot install Watchman. Install Homebrew first."
-        PHASES_SKIPPED+=("Phase 9: Watchman")
+        PHASES_SKIPPED+=("Phase 9: Watchman (Homebrew not found)")
       else
         print_step "Installing Watchman..."
         brew install watchman

@@ -159,7 +159,7 @@ function checkHomebrew() {
     const brewVersion = execSync(command, { encoding: 'utf8' })
     console.log('homebrew version: ', brewVersion, '\n')
   } catch (err) {
-    return `${ISSUE}
+    return `\n${ISSUE}
     Homebrew is required for managing packages on Mac. You can install it by running: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
   }
   return ''
@@ -177,7 +177,7 @@ function checkGitHubCli() {
     const ghVersion = execSync(command, { encoding: 'utf8' })
     console.log('GitHub CLI version: ', ghVersion, '\n')
   } catch (err) {
-    return `${ISSUE}
+    return `\n${ISSUE}
     GitHub CLI is required to interact with GitHub from your terminal. You can install it with homebrew using "brew install gh"`
   }
   return ''
