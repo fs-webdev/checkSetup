@@ -63,10 +63,13 @@ function checkArtifactoryAccess() {
 
 function checkNvmVersion() {
   console.log('Checking for nvm usage')
+  if (process.execPath.includes('/.fnm/')) {
+    console.log('Using fnm, good work\n')
+    return ''
+  }
   if (!process.execPath.includes('/.nvm/')) {
-    return `${TIP}
-    We highly recommend using nvm to install and switch between versions of node. More info here https://github.com/creationix/nvm
-`
+    return `\n${TIP}
+    We highly recommend using nvm to install and switch between versions of node. More info here https://github.com/creationix/nvm`
   }
   console.log('Using nvm, good work\n')
   return ''
@@ -75,13 +78,13 @@ function checkNvmVersion() {
 async function checkNetrcConfig() {
   console.log('Checking ~/.netrc file and github access to fs-webdev')
   if (Object.keys(netrc).length === 0) {
-    return `${ISSUE}
+    return `\n${ISSUE}
     You don't appear to have a ~/.netrc file. In order to install private github dependencies, it is
     necessary to have a correct entry in your ~/.netrc file.`
   }
   const githubData = netrc['github.com']
   if (githubData === undefined) {
-    return `${ISSUE}
+    return `\n${ISSUE}
     You don't appear to have a github.com entry in your ~/.netrc file. In order to install private github dependencies, it is
     necessary to have a correct github.com entry in your ~/.netrc file.`
   }
@@ -94,17 +97,17 @@ async function checkNetrcConfig() {
       },
     })
     if (data.status !== 200) {
-      return `${WARNING}
+      return `\n${WARNING}
       A call to a private repo on github.com/fs-webdev did not return a status of 200. Your ~/.netrc file may not be setup correctly`
     }
 
     if (netrc['api.github.com'] === undefined) {
-      console.log(`${TIP} if you ever want to use curl or similar terminal commands to hit github's API, you can add an entry into your ~/.netrc file
+      console.log(`\n${TIP} if you ever want to use curl or similar terminal commands to hit github's API, you can add an entry into your ~/.netrc file
       that has the same data as your github.com entry, but change the machine name to "api.github.com". Then you won't have to worry about
       setting authentication headers or tokens in curl`)
     }
   } catch (err) {
-    return `${ERROR}
+    return `\n${ERROR}
     An error occurred when trying to get data from the private repo "fs-webdev/${privateRepo}" on github.com.
     Check the following error message, and contact frontier core if necessary:
       ${err.message}`
@@ -119,16 +122,13 @@ function checkNpmVersion() {
   try {
     const npmVersion = execSync(command, { encoding: 'utf8' })
     console.log('npm version: ', npmVersion)
-    const [major, minor] = npmVersion.split('.').map(Number)
+    const [major] = npmVersion.split('.').map(Number)
     if (major < MINIMUM_RECOMMENDED_NPM_VERSION) {
-      return `${ISSUE} You are using npm version ${major}, but ${MINIMUM_RECOMMENDED_NPM_VERSION} is the minimum version we support`
-    }
-    if (major === 6 && minor === 9) {
-      return `${ISSUE}
-      There is a known bug with npm v6.9. You need to run 'npm i -g npm@6.14'`
+      return `\n${ISSUE}
+    You are using npm version ${major}, but ${MINIMUM_RECOMMENDED_NPM_VERSION} is the minimum version we support\n`
     }
   } catch (err) {
-    return `${ERROR}
+    return `\n${ERROR}
     There was an issue trying to check your version of npm. Try running "npm --version" in your terminal.
     Please reach out to a member of the frontier core team for assistance`
   }
@@ -140,8 +140,8 @@ function checkNodeVersion() {
   const { node: nodeVersion } = process.versions
   const [major] = nodeVersion.split('.')
   if (Number(major) < MINIMUM_RECOMMENDED_NODE_VERSION) {
-    return `${ISSUE}
-    You are using node version ${major}, but ${MINIMUM_RECOMMENDED_NODE_VERSION} is the minimum version we support`
+    return `\n${ISSUE}
+    You are using node version ${major}, but ${MINIMUM_RECOMMENDED_NODE_VERSION} is the minimum version we support\n`
   }
   console.log('node version: ', nodeVersion, '\n')
   return ''
