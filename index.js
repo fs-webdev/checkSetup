@@ -63,10 +63,11 @@ function checkArtifactoryAccess() {
 
 function checkNvmVersion() {
   console.log('Checking for nvm usage')
-  if (process.execPath.includes('/.fnm/')) {
+  try {
+    execSync('fnm --version', { encoding: 'utf8' })
     console.log('Using fnm, good work\n')
     return ''
-  }
+  } catch (_) {}
   if (!process.execPath.includes('/.nvm/')) {
     return `\n${TIP}
     We highly recommend using nvm to install and switch between versions of node. More info here https://github.com/creationix/nvm`
