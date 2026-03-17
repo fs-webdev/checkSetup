@@ -479,7 +479,7 @@ phase_5_artifactory() {
   set +e
   local curl_output
   curl_output="$(curl -su "${ARTIFACTORY_EMAIL}:${ARTIFACTORY_TOKEN}" \
-    "https://familysearch.jfrog.io/artifactory/api/npm/npm-virtual/auth/fs" 2>&1)"
+    "https://familysearch.jfrog.io/artifactory/api/npm/auth" 2>&1)"
   local curl_exit=$?
   set -e
 
