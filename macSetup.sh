@@ -92,7 +92,7 @@ print_banner() {
   echo ""
   echo -e "  This script will configure your Mac for Frontier development."
   echo -e "  Some steps require external actions (GitHub, Artifactory) and will"
-  echo -e "  pause so you can complete them in a browser."
+  echo -e "  wait for you to complete them in a browser."
   echo ""
   echo -e "  ${DIM}You can re-run this script at any time — completed steps are skipped.${RESET}"
   echo ""
@@ -146,13 +146,13 @@ collect_inputs() {
     print_info "Generate one at: https://github.com/settings/tokens"
     print_info "After generating, authorize it for the 'fs-webdev' and 'LDS-Church' orgs (Configure SSO)."
     echo ""
-    print_prompt "GitHub Personal Access Token (input hidden): "
-    read -rs GITHUB_TOKEN
+    print_prompt "GitHub Personal Access Token: "
+    read -r GITHUB_TOKEN
     echo ""
     while [[ -z "$GITHUB_TOKEN" ]]; do
       print_warn "Token cannot be empty."
       print_prompt "GitHub Personal Access Token: "
-      read -rs GITHUB_TOKEN
+      read -r GITHUB_TOKEN
       echo ""
     done
   fi
@@ -240,8 +240,8 @@ phase_2_github_access() {
   # If we didn't collect a token yet (netrc already existed), collect it now
   if [[ -z "$GITHUB_TOKEN" ]]; then
     if ! grep -q "machine github.com" "$HOME/.netrc" 2>/dev/null; then
-      print_prompt "Paste your GitHub Personal Access Token (input hidden): "
-      read -rs GITHUB_TOKEN
+      print_prompt "Paste your GitHub Personal Access Token: "
+      read -r GITHUB_TOKEN
       echo ""
     fi
   fi
@@ -449,7 +449,7 @@ phase_5_artifactory() {
 
   # Collect Artifactory credentials just-in-time
   echo ""
-  print_prompt "Your Artifactory email (usually your work email): "
+  print_prompt "Your Artifactory email (your @familysearch.org email): "
   read -r ARTIFACTORY_EMAIL
   while [[ -z "$ARTIFACTORY_EMAIL" ]]; do
     print_warn "Email cannot be empty."
@@ -457,13 +457,13 @@ phase_5_artifactory() {
     read -r ARTIFACTORY_EMAIL
   done
 
-  print_prompt "Artifactory Identity Token (input hidden): "
-  read -rs ARTIFACTORY_TOKEN
+  print_prompt "Artifactory Identity Token: "
+  read -r ARTIFACTORY_TOKEN
   echo ""
   while [[ -z "$ARTIFACTORY_TOKEN" ]]; do
     print_warn "Token cannot be empty."
     print_prompt "Artifactory Identity Token: "
-    read -rs ARTIFACTORY_TOKEN
+    read -r ARTIFACTORY_TOKEN
     echo ""
   done
 
@@ -605,7 +605,6 @@ phase_7_homebrew() {
 # =============================================================================
 # PHASE 8: GITHUB CLI TOOL
 # =============================================================================
-
 
 phase_8_github_cli() {
   print_header "Phase 8: GitHub CLI Tool (gh)"
