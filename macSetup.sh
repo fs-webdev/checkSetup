@@ -109,7 +109,6 @@ collect_inputs() {
   local existing_name
   existing_name="$(git config --global user.name 2>/dev/null || true)"
   if [[ -n "$existing_name" ]]; then
-    print_skip "git user.name already set to \"${existing_name}\""
     GIT_NAME="$existing_name"
   else
     print_prompt "Your full name (for git commits): "
@@ -125,7 +124,6 @@ collect_inputs() {
   local existing_email
   existing_email="$(git config --global user.email 2>/dev/null || true)"
   if [[ -n "$existing_email" ]]; then
-    print_skip "git user.email already set to \"${existing_email}\""
     GIT_EMAIL="$existing_email"
   else
     print_prompt "Your email associated with GitHub (for git commits): "
@@ -134,26 +132,6 @@ collect_inputs() {
       print_warn "Email cannot be empty."
       print_prompt "Your GitHub email: "
       read -r GIT_EMAIL
-    done
-  fi
-
-  # GitHub token (skip if .netrc already has it)
-  if grep -q "machine github.com" "$HOME/.netrc" 2>/dev/null; then
-    print_skip ".netrc already has a github.com entry — skipping token prompt"
-  else
-    echo ""
-    print_info "You will need a GitHub Personal Access Token (classic) with 'repo' scope."
-    print_info "Generate one at: https://github.com/settings/tokens"
-    print_info "After generating, authorize it for the 'fs-webdev' and 'LDS-Church' orgs (Configure SSO)."
-    echo ""
-    print_prompt "GitHub Personal Access Token: "
-    read -r GITHUB_TOKEN
-    echo ""
-    while [[ -z "$GITHUB_TOKEN" ]]; do
-      print_warn "Token cannot be empty."
-      print_prompt "GitHub Personal Access Token: "
-      read -r GITHUB_TOKEN
-      echo ""
     done
   fi
 
@@ -211,10 +189,10 @@ phase_2_github_access() {
   echo ""
   echo -e "  ${BOLD}1.${RESET} Create a GitHub account at ${CYAN}https://github.com${RESET} (if you don't have one)"
   echo -e "  ${BOLD}2.${RESET} Enable two-factor authentication (2FA) on your GitHub account"
-  echo -e "  ${BOLD}3.${RESET} Request org membership via ${CYAN}https://tools.fsdpt.org${RESET}"
-  echo -e "      → Look for the GitHub org request tool and request access to both:"
+  echo -e "  ${BOLD}3.${RESET} Request org membership via ${CYAN}https://tools.fsdpt.org/portal/userManagement/requestAccess${RESET}"
+  echo -e "      → Look for the GitHub org request tool and request access to:"
   echo -e "        • ${BOLD}fs-webdev${RESET}"
-  echo -e "        • ${BOLD}LDS-Church${RESET}"
+  echo -e "        • ${BOLD}LDS-Church${RESET} (if you are a developer)"
   echo -e "  ${BOLD}4.${RESET} Accept the invitation email from GitHub"
   echo ""
   echo -e "  ${DIM}Note: Org membership requests require manager approval and may take a few minutes.${RESET}"
@@ -224,26 +202,6 @@ phase_2_github_access() {
     print_warn "Skipping GitHub access phase — some later steps may fail without org membership"
     PHASES_SKIPPED+=("Phase 2: GitHub Access (skipped by user)")
     return 0
-  fi
-
-  echo ""
-  echo -e "  ${BOLD}Next: Generate a Personal Access Token${RESET}"
-  echo ""
-  echo -e "  ${BOLD}5.${RESET} Go to ${CYAN}https://github.com/settings/tokens${RESET}"
-  echo -e "  ${BOLD}6.${RESET} Click 'Generate new token' → 'Generate new token (classic)'"
-  echo -e "  ${BOLD}7.${RESET} Give it a name (e.g., 'FamilySearch Dev'), set expiration, check the ${BOLD}repo${RESET} scope"
-  echo -e "  ${BOLD}8.${RESET} Click 'Generate token' and copy the token value"
-  echo -e "  ${BOLD}9.${RESET} Back on the tokens list, click 'Configure SSO' next to your token"
-  echo -e "      → Authorize for ${BOLD}fs-webdev${RESET} and ${BOLD}LDS-Church${RESET}"
-  echo ""
-
-  # If we didn't collect a token yet (netrc already existed), collect it now
-  if [[ -z "$GITHUB_TOKEN" ]]; then
-    if ! grep -q "machine github.com" "$HOME/.netrc" 2>/dev/null; then
-      print_prompt "Paste your GitHub Personal Access Token: "
-      read -r GITHUB_TOKEN
-      echo ""
-    fi
   fi
 
   print_done "GitHub access phase complete"
@@ -292,16 +250,33 @@ phase_3_git_config() {
     print_skip "~/.netrc already has github.com entry"
   else
     if [[ -z "$GITHUB_TOKEN" ]]; then
-      print_warn "No GitHub token available — skipping .netrc write"
-    else
-      {
+      echo ""
+      print_info "You need a GitHub Personal Access Token (classic) to authenticate with GitHub."
+      print_info "Steps to generate one:"
+      echo -e "  ${BOLD}1.${RESET} Go to ${CYAN}https://github.com/settings/tokens${RESET}"
+      echo -e "  ${BOLD}2.${RESET} Click 'Generate new token' → 'Generate new token (classic)'"
+      echo -e "  ${BOLD}3.${RESET} Give it a name (e.g., 'FamilySearch Dev'), set expiration, check the ${BOLD}repo${RESET} scope"
+      echo -e "  ${BOLD}4.${RESET} Click 'Generate token' and copy the token value"
+      echo -e "  ${BOLD}5.${RESET} Back on the tokens list, click 'Configure SSO' next to your token"
+      echo -e "      → Authorize for ${BOLD}fs-webdev${RESET} and ${BOLD}LDS-Church${RESET}"
+      echo ""
+      print_prompt "Paste your GitHub Personal Access Token: "
+      read -r GITHUB_TOKEN
+      echo ""
+      while [[ -z "$GITHUB_TOKEN" ]]; do
+        print_warn "Token cannot be empty."
+        print_prompt "GitHub Personal Access Token: "
+        read -r GITHUB_TOKEN
         echo ""
-        echo "machine github.com"
-        echo "  login $GITHUB_TOKEN"
-      } >>"$HOME/.netrc"
-      chmod 600 "$HOME/.netrc"
-      print_done "~/.netrc updated with github.com credentials"
+      done
     fi
+    {
+      echo ""
+      echo "machine github.com"
+      echo "  login $GITHUB_TOKEN"
+    } >>"$HOME/.netrc"
+    chmod 600 "$HOME/.netrc"
+    print_done "~/.netrc updated with github.com credentials"
   fi
 
   print_done "Git configuration complete"
@@ -326,9 +301,9 @@ phase_4_nvm_and_node() {
   if [[ -s "$HOME/.nvm/nvm.sh" ]]; then
     print_skip "nvm already installed"
   else
-    print_step "Installing nvm v0.40.3..."
+    print_step "Installing nvm v0.40.4..."
     set +e
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
     local curl_exit=$?
     set -e
     if ((curl_exit != 0)); then
@@ -432,11 +407,11 @@ phase_5_artifactory() {
   echo ""
   echo -e "  ${BOLD}Artifactory access must be requested before we can configure it.${RESET}"
   echo ""
-  echo -e "  ${BOLD}1.${RESET} Go to ${CYAN}https://tools.fsdpt.org${RESET}"
-  echo -e "  ${BOLD}2.${RESET} Find the Artifactory access request tool"
-  echo -e "  ${BOLD}3.${RESET} Submit a request for npm registry access"
-  echo -e "  ${BOLD}4.${RESET} Wait for approval (typically ~10 minutes)"
-  echo -e "  ${BOLD}5.${RESET} Once approved, log in to ${CYAN}https://familysearch.jfrog.io${RESET}"
+  echo -e "  ${BOLD}1.${RESET} Go to ${CYAN}https://tools.fsdpt.org/portal/userManagement/requestAccess${RESET}"
+  echo -e "  ${BOLD}2.${RESET} Search available permissions for \"Artifactory - User\""
+  echo -e "  ${BOLD}3.${RESET} Submit a request for the \"Artifactory - User\" permission"
+  echo -e "  ${BOLD}4.${RESET} Wait for approval from your manager (you may need to ping them to go approve it)"
+  echo -e "  ${BOLD}5.${RESET} Once approved, sign in with SAML SSO (little cloud/key icon) at ${CYAN}https://familysearch.jfrog.io${RESET}"
   echo -e "  ${BOLD}6.${RESET} Click your username (top right) → 'Edit Profile'"
   echo -e "  ${BOLD}7.${RESET} Generate an 'Identity Token' and copy it"
   echo ""
@@ -479,7 +454,7 @@ phase_5_artifactory() {
   set +e
   local curl_output
   curl_output="$(curl -su "${ARTIFACTORY_EMAIL}:${ARTIFACTORY_TOKEN}" \
-    "https://familysearch.jfrog.io/artifactory/api/npm/npm-virtual/auth/fs" 2>&1)"
+    "https://familysearch.jfrog.io/artifactory/api/npm/fs-npm-prod-virtual/auth/fs" 2>&1)"
   local curl_exit=$?
   set -e
 
@@ -707,11 +682,10 @@ print_summary() {
   echo -e "  ${BOLD}Next steps by role:${RESET}"
   echo ""
   echo -e "  ${CYAN}Designers:${RESET}"
-  echo -e "    ${DIM}Register the UX plugin marketplace:${RESET}"
-  echo -e "    claude plugin marketplace add zion-ux-plugin https://github.com/fs-webdev/zion-ux-plugin.git"
-  echo ""
-  echo -e "    ${DIM}Install the UX playground plugin:${RESET}"
-  echo -e "    claude plugin add ux-playground"
+  echo -e "    ${DIM}Clone the ux-playground repository:${RESET}"
+  echo -e "    git clone https://github.com/fs-webdev/ux-playground.git"
+  echo -e "    cd ux-playground"
+  echo -e "    ${DIM}Start claude-code and ask it to help you with starting up the project${RESET}"
   echo ""
   echo -e "  ${CYAN}Developers:${RESET}"
   echo -e "    ${DIM}Visit the Frontier docs for project-specific setup:${RESET}"
