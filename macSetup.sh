@@ -99,7 +99,7 @@ print_banner() {
 }
 
 # =============================================================================
-# PHASE 0: COLLECT INPUTS UPFRONT
+# PHASE 0: COLLECT GIT CONFIGURATION
 # =============================================================================
 
 collect_inputs() {
@@ -453,7 +453,7 @@ phase_5_artifactory() {
   print_step "Fetching Artifactory npm configuration..."
   set +e
   local curl_output
-  curl_output="$(curl -su "${ARTIFACTORY_EMAIL}:${ARTIFACTORY_TOKEN}" \
+  curl_output="$(curl -sSu "${ARTIFACTORY_EMAIL}:${ARTIFACTORY_TOKEN}" \
     "https://familysearch.jfrog.io/artifactory/api/npm/fs-npm-prod-virtual/auth/fs" 2>&1)"
   local curl_exit=$?
   set -e
@@ -623,15 +623,17 @@ phase_9_optional() {
         print_warn "Homebrew not found — cannot install Watchman. Install Homebrew first."
         PHASES_SKIPPED+=("Phase 9: Watchman (Homebrew not found)")
       else
-        print_step "Installing Watchman..."
-        brew install watchman
-        print_done "Watchman installed"
+        local log_file="/tmp/watchman_install.log"
+        print_step "Starting Watchman installation in the background..."
+        brew install watchman >"$log_file" 2>&1 &
+        disown
+        print_done "Watchman installing in background — log: ${log_file}"
         echo ""
         print_warn "Watchman may need Full Disk Access to work properly."
         print_info "If you see permission errors, go to:"
         print_info "  System Settings → Privacy & Security → Full Disk Access"
         print_info "  and enable Watchman (or your terminal app)."
-        PHASES_COMPLETED+=("Phase 9: Watchman")
+        PHASES_COMPLETED+=("Phase 9: Watchman (installing in background — log: ${log_file})")
       fi
     else
       print_info "Skipping Watchman installation"
