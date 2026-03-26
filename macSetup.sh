@@ -412,7 +412,7 @@ phase_5_artifactory() {
   echo -e "  ${BOLD}4.${RESET} Wait for approval from your manager (you may need to ping them to go approve it)"
   echo -e "  ${BOLD}5.${RESET} Once approved, sign in with SAML SSO (little cloud/key icon) at ${CYAN}https://familysearch.jfrog.io${RESET}"
   echo -e "  ${BOLD}6.${RESET} Click your username (top right) → 'Edit Profile'"
-  echo -e "  ${BOLD}7.${RESET} Generate an 'Identity Token' and copy it"
+  echo -e "  ${BOLD}7.${RESET} Click the 'Generate an Identity Token' button, and then copy the token created"
   echo ""
 
   if ! pause_for_external_action "Request Artifactory access, wait for approval, then generate an Identity Token"; then
