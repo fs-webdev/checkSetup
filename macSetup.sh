@@ -238,9 +238,7 @@ phase_3_git_config() {
   # url rewrite: git:// → https://
   local existing_rewrite
   existing_rewrite="$(git config --global url."https://".insteadOf 2>/dev/null || true)"
-  if [[ "$existing_rewrite" == "git://" ]]; then
-    print_skip "git url rewrite (git:// → https://) already configured"
-  else
+  if [[ "$existing_rewrite" != "git://" ]]; then
     git config --global url."https://".insteadOf "git://"
     print_done "git url rewrite configured (git:// → https://)"
   fi
@@ -255,10 +253,12 @@ phase_3_git_config() {
       print_info "Steps to generate one:"
       echo -e "  ${BOLD}1.${RESET} Go to ${CYAN}https://github.com/settings/tokens${RESET}"
       echo -e "  ${BOLD}2.${RESET} Click 'Generate new token' → 'Generate new token (classic)'"
-      echo -e "  ${BOLD}3.${RESET} Give it a name (e.g., 'FamilySearch Dev'), set expiration, check the ${BOLD}repo${RESET} scope"
-      echo -e "  ${BOLD}4.${RESET} Click 'Generate token' and copy the token value"
-      echo -e "  ${BOLD}5.${RESET} Back on the tokens list, click 'Configure SSO' next to your token"
-      echo -e "      → Authorize for ${BOLD}fs-webdev${RESET} and ${BOLD}LDS-Church${RESET}"
+      echo -e "  ${BOLD}3.${RESET} Give it a name (e.g., 'FamilySearch Dev')"
+      echo -e "  ${BOLD}4.${RESET} Choose \"No expiration\""
+      echo -e "  ${BOLD}5.${RESET} For Scope, check the ${BOLD}repo${RESET} scope"
+      echo -e "  ${BOLD}6.${RESET} Click 'Generate token' and copy the token value"
+      echo -e "  ${BOLD}7.${RESET} Back on the tokens list, click 'Configure SSO' next to your token"
+      echo -e "      → Authorize for ${BOLD}fs-webdev${RESET} and ${BOLD}fs-eng (for developers)${RESET}"
       echo ""
       print_prompt "Paste your GitHub Personal Access Token: "
       read -r GITHUB_TOKEN
@@ -399,7 +399,6 @@ phase_5_artifactory() {
   if grep -q "familysearch.jfrog.io" "$HOME/.npmrc" 2>/dev/null; then
     print_skip "~/.npmrc already has Artifactory configuration"
     PHASES_SKIPPED+=("Phase 5: Artifactory")
-    _verify_artifactory
     return 0
   fi
 
@@ -464,16 +463,16 @@ phase_5_artifactory() {
     exit 1
   fi
 
-  # Verify the response contains an auth token
-  if ! echo "$curl_output" | grep -q "_authToken"; then
-    print_error "Artifactory response did not contain an auth token."
+  # Verify the response contains expected npm credentials (_password + registry)
+  if ! echo "$curl_output" | grep -q "_password"; then
+    print_error "Artifactory response did not contain expected credentials."
     print_error "Response: ${curl_output}"
     print_error "Check your credentials and try again."
     exit 1
   fi
 
-  # Write to .npmrc
-  echo "$curl_output" >>"$HOME/.npmrc"
+  # Write to .npmrc, stripping deprecated always-auth entry
+  echo "$curl_output" | grep -v ":always-auth=" >>"$HOME/.npmrc"
 
   # Confirm it was written
   if ! grep -q "familysearch.jfrog.io" "$HOME/.npmrc"; then
@@ -483,24 +482,7 @@ phase_5_artifactory() {
 
   print_done "~/.npmrc updated with Artifactory configuration"
 
-  _verify_artifactory
-
   PHASES_COMPLETED+=("Phase 5: Artifactory")
-}
-
-_verify_artifactory() {
-  print_step "Verifying Artifactory setup with npx fs-webdev/checkSetup..."
-  echo ""
-  set +e
-  npx fs-webdev/checkSetup
-  local check_exit=$?
-  set -e
-  echo ""
-  if ((check_exit == 0)); then
-    print_done "Artifactory verification passed"
-  else
-    print_warn "Artifactory verification returned exit code ${check_exit} — you may need to revisit credentials"
-  fi
 }
 
 # =============================================================================
@@ -643,6 +625,25 @@ phase_9_optional() {
 }
 
 # =============================================================================
+# POST-PHASE VERIFICATION
+# =============================================================================
+
+_verify_dev_environment() {
+  print_step "Verifying dev environment setup with npx fs-webdev/checkSetup..."
+  echo ""
+  set +e
+  npx fs-webdev/checkSetup
+  local check_exit=$?
+  set -e
+  echo ""
+  if ((check_exit == 0)); then
+    print_done "Dev environment verification passed"
+  else
+    print_warn "Dev environment verification returned exit code ${check_exit} — you may need to revisit setup steps"
+  fi
+}
+
+# =============================================================================
 # SUMMARY
 # =============================================================================
 
@@ -669,29 +670,24 @@ print_summary() {
     echo ""
   fi
 
-  echo -e "  ${BOLD}Quick verification:${RESET}"
-  echo -e "  ${DIM}node -v          →${RESET} should show v24.x"
-  echo -e "  ${DIM}fr --version     →${RESET} should show Frontier CLI version"
-  echo -e "  ${DIM}git config --global user.name${RESET}  →  should show your name"
-  echo ""
-
   echo -e "  ${YELLOW}${BOLD}⚠  Reload your shell to apply all changes:${RESET}"
   echo ""
-  echo -e "    ${BOLD}source ~/.zshrc${RESET}"
-  echo -e "  ${DIM}or restart your terminal${RESET}"
+  echo -e "  ${CYAN}source ~/.zshrc${RESET}"
+  echo -e "    ${DIM}or restart your terminal${RESET}"
   echo ""
 
   echo -e "  ${BOLD}Next steps by role:${RESET}"
   echo ""
-  echo -e "  ${CYAN}Designers:${RESET}"
-  echo -e "    ${DIM}Clone the ux-playground repository:${RESET}"
-  echo -e "    git clone https://github.com/fs-webdev/ux-playground.git"
-  echo -e "    cd ux-playground"
-  echo -e "    ${DIM}Start claude-code and ask it to help you with starting up the project${RESET}"
+  echo -e "  ${BOLD}Designers:${RESET}"
+  echo -e "    Clone the ux-playground repository and startup claude:"
+  echo -e "      ${CYAN}git clone https://github.com/fs-webdev/ux-playground.git${RESET}"
+  echo -e "      ${CYAN}cd ux-playground${RESET}"
+  echo -e "      ${CYAN}claude${RESET}"
+  echo -e "        ${DIM}ask claude to help you setup and start the project${RESET}"
   echo ""
-  echo -e "  ${CYAN}Developers:${RESET}"
-  echo -e "    ${DIM}Visit the Frontier docs for project-specific setup:${RESET}"
-  echo -e "    ${CYAN}https://frontier.familysearch.org/docs${RESET}"
+  echo -e "  ${BOLD}Developers:${RESET}"
+  echo -e "    Visit the Frontier docs for project-specific setup:"
+  echo -e "      https://frontier.familysearch.org/docs"
   echo ""
 }
 
@@ -712,6 +708,7 @@ main() {
   phase_7_homebrew
   phase_8_github_cli
   phase_9_optional
+  _verify_dev_environment
   print_summary
 }
 
