@@ -1,6 +1,6 @@
 {
   "name": "check-setup",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A little tool to check if a person's computer is setup as expected with tooling and access they need.",
   "main": "index.js",
   "bin": {
@@ -21,8 +21,7 @@
   },
   "homepage": "https://github.com/fs-webdev/checkFrontierSetup#readme",
   "dependencies": {
-    "axios": "^0.22.0",
+    "axios": "^1.14.0",
     "netrc": "^0.1.4"
-  },
-  "devDependencies": {}
+  }
 }
