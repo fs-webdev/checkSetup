@@ -38,8 +38,6 @@ PHASES_SKIPPED=()
 GIT_NAME=""
 GIT_EMAIL=""
 GITHUB_TOKEN=""
-ARTIFACTORY_EMAIL=""
-ARTIFACTORY_TOKEN=""
 
 # =============================================================================
 # GUARDS & UTILITIES
@@ -136,6 +134,27 @@ collect_inputs() {
   fi
 
   print_done "Inputs collected"
+
+  # ── Preflight: Request all portal permissions upfront ─────────────────────
+  echo ""
+  echo -e "  ${BOLD}Before continuing, you need permissions from the Engineering Tools Portal.${RESET}"
+  echo -e "  ${BOLD}Request both of the following at the same time so you only wait for manager approval once.${RESET}"
+  echo ""
+  echo -e "  ${BOLD}1.${RESET} Go to ${CYAN}https://tools.fsdpt.org/portal/userManagement/requestAccess${RESET}"
+  echo -e "  ${BOLD}2.${RESET} Search for and request ${BOLD}GitHub${RESET} permissions:"
+  echo -e "        • ${BOLD}Github - fs-webdev - Member${RESET}"
+  echo -e "        • ${BOLD}Github - fs-eng - Member${RESET} (if you are a developer)"
+  echo -e "  ${BOLD}3.${RESET} Search for and request ${BOLD}Artifactory${RESET} permissions:"
+  echo -e "        • ${BOLD}Artifactory - User${RESET}"
+  echo -e "  ${BOLD}4.${RESET} Ask your manager to approve all requests"
+  echo -e "  ${BOLD}5.${RESET} Wait for manager approval before continuing"
+  echo ""
+  echo -e "  ${DIM}Requesting both now avoids having to wait for manager approval twice later.${RESET}"
+  echo ""
+
+  pause_for_external_action "Request both GitHub and Artifactory permissions in the portal, wait for manager approval, then press Enter" || true
+
+  print_done "Portal permissions requested"
 }
 
 # =============================================================================
@@ -189,18 +208,12 @@ phase_2_github_access() {
   echo ""
   echo -e "  ${BOLD}1.${RESET} Create a GitHub account at ${CYAN}https://github.com${RESET} (if you don't have one)"
   echo -e "  ${BOLD}2.${RESET} Enable two-factor authentication (2FA) on your GitHub account"
-  echo -e "  ${BOLD}3.${RESET} Request GitHub org membership via ${CYAN}https://tools.fsdpt.org/portal/userManagement/requestAccess${RESET}"
-  echo -e "      → Search for \"github\" in the Available Permissions."
-  echo -e "      → Request access to:"
-  echo -e "        • ${BOLD}Github - fs-webdev - Member${RESET}"
-  echo -e "        • ${BOLD}Github - fs-eng - Member${RESET} (if you are a developer)"
-  echo -e "  ${BOLD}4.${RESET} Ask your Manager to accept the Permission request"
-  echo -e "  ${BOLD}5.${RESET} Accept the invitation email from GitHub"
+  echo -e "  ${BOLD}3.${RESET} Accept the invitation email from GitHub once your manager has approved your request"
   echo ""
-  echo -e "  ${DIM}Note: Org membership requests require manager approval and may take a few minutes.${RESET}"
+  echo -e "  ${DIM}Note: GitHub org membership was requested during preflight. If not yet approved, wait for your manager before continuing.${RESET}"
   echo ""
 
-  if ! pause_for_external_action "Complete GitHub setup (account, 2FA, org membership, invitation acceptance) then press Enter"; then
+  if ! pause_for_external_action "Complete GitHub setup (account, 2FA, accept invitation email) then press Enter"; then
     print_warn "Skipping GitHub access phase — some later steps may fail without org membership"
     PHASES_SKIPPED+=("Phase 2: GitHub Access (skipped by user)")
     return 0
@@ -407,21 +420,9 @@ phase_5_artifactory() {
     return 0
   fi
 
-  # Request access first
   echo ""
-  echo -e "  ${BOLD}Artifactory access must be requested before we can configure it.${RESET}"
+  echo -e "  ${DIM}Artifactory access was requested during preflight. If not yet approved, wait for your manager before continuing.${RESET}"
   echo ""
-  echo -e "  ${BOLD}1.${RESET} Go to ${CYAN}https://tools.fsdpt.org/portal/userManagement/requestAccess${RESET}"
-  echo -e "  ${BOLD}2.${RESET} Search available permissions for \"Artifactory - User\""
-  echo -e "  ${BOLD}3.${RESET} Submit a request for the \"Artifactory - User\" permission"
-  echo -e "  ${BOLD}4.${RESET} Wait for approval from your manager (you may need to ping them to go approve it)"
-  echo ""
-
-  if ! pause_for_external_action "Request Artifactory access and wait for approval"; then
-    print_warn "Skipping Artifactory phase"
-    PHASES_SKIPPED+=("Phase 5: Artifactory (skipped by user)")
-    return 0
-  fi
 
   # Set registry using npm config
   npm config set registry "https://familysearch.jfrog.io/artifactory/api/npm/fs-npm-prod-virtual/"
