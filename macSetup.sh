@@ -444,7 +444,7 @@ phase_5_artifactory() {
   npm login
 
   # Verify it worked
-  if npm view axios version &>/dev/null; then
+  if npm view @fs/check-setup version &>/dev/null; then
     print_done "Artifactory authentication successful"
     PHASES_COMPLETED+=("Phase 5: Artifactory")
   else
