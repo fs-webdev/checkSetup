@@ -399,8 +399,10 @@ phase_5_artifactory() {
   print_header "Phase 5: Artifactory npm Registry"
 
   # Check if already configured
-  if grep -q "familysearch.jfrog.io" "$HOME/.npmrc" 2>/dev/null; then
-    print_skip "~/.npmrc already has Artifactory configuration"
+  local current_registry
+  current_registry="$(npm config get registry 2>/dev/null || true)"
+  if [[ "$current_registry" == *"familysearch.jfrog.io"* ]]; then
+    print_skip "Artifactory registry already configured"
     PHASES_SKIPPED+=("Phase 5: Artifactory")
     return 0
   fi
@@ -413,79 +415,42 @@ phase_5_artifactory() {
   echo -e "  ${BOLD}2.${RESET} Search available permissions for \"Artifactory - User\""
   echo -e "  ${BOLD}3.${RESET} Submit a request for the \"Artifactory - User\" permission"
   echo -e "  ${BOLD}4.${RESET} Wait for approval from your manager (you may need to ping them to go approve it)"
-  echo -e "  ${BOLD}5.${RESET} Once approved, sign in with SAML SSO (little cloud/key icon) at ${CYAN}https://familysearch.jfrog.io${RESET}"
-  echo -e "  ${BOLD}6.${RESET} Click your username (top right) → 'Edit Profile'"
-  echo -e "  ${BOLD}7.${RESET} Click the 'Generate an Identity Token' button, and then copy the token created"
   echo ""
 
-  if ! pause_for_external_action "Request Artifactory access, wait for approval, then generate an Identity Token"; then
+  if ! pause_for_external_action "Request Artifactory access and wait for approval"; then
     print_warn "Skipping Artifactory phase"
     PHASES_SKIPPED+=("Phase 5: Artifactory (skipped by user)")
     return 0
   fi
 
-  # Collect Artifactory credentials just-in-time
+  # Set registry using npm config
+  npm config set registry "https://familysearch.jfrog.io/artifactory/api/npm/fs-npm-prod-virtual/"
+
+  # Verify registry was set correctly
+  local configured_registry
+  configured_registry="$(npm config get registry)"
+  if [[ "$configured_registry" != *"familysearch.jfrog.io"* ]]; then
+    print_error "Failed to configure Artifactory registry. Current registry: ${configured_registry}"
+    exit 1
+  fi
+  print_done "Artifactory registry configured"
+
+  # Authenticate with npm login
   echo ""
-  print_prompt "Your Artifactory email (your @familysearch.org email): "
-  read -r ARTIFACTORY_EMAIL
-  while [[ -z "$ARTIFACTORY_EMAIL" ]]; do
-    print_warn "Email cannot be empty."
-    print_prompt "Artifactory email: "
-    read -r ARTIFACTORY_EMAIL
-  done
-
-  print_prompt "Artifactory Identity Token: "
-  read -r ARTIFACTORY_TOKEN
+  echo -e "  ${BOLD}npm login will open your browser for SAML SSO authentication.${RESET}"
+  echo -e "  ${DIM}Complete the login flow in your browser, then return here and press Enter.${RESET}"
   echo ""
-  while [[ -z "$ARTIFACTORY_TOKEN" ]]; do
-    print_warn "Token cannot be empty."
-    print_prompt "Artifactory Identity Token: "
-    read -r ARTIFACTORY_TOKEN
-    echo ""
-  done
 
-  # Back up existing .npmrc
-  if [[ -f "$HOME/.npmrc" ]]; then
-    local backup="$HOME/.npmrc.backup.$(date +%Y%m%d_%H%M%S)"
-    cp "$HOME/.npmrc" "$backup"
-    print_info "Backed up existing ~/.npmrc to ${backup}"
-  fi
+  npm login
 
-  # Fetch Artifactory .npmrc config
-  print_step "Fetching Artifactory npm configuration..."
-  set +e
-  local curl_output
-  curl_output="$(curl -sSu "${ARTIFACTORY_EMAIL}:${ARTIFACTORY_TOKEN}" \
-    "https://familysearch.jfrog.io/artifactory/api/npm/fs-npm-prod-virtual/auth/fs" 2>&1)"
-  local curl_exit=$?
-  set -e
-
-  if ((curl_exit != 0)); then
-    print_error "Failed to fetch Artifactory config (curl exit: ${curl_exit})"
-    print_error "Check your email and token, then re-run the script."
+  # Verify it worked
+  if npm view @fs/check-setup version &>/dev/null; then
+    print_done "Artifactory authentication successful"
+    PHASES_COMPLETED+=("Phase 5: Artifactory")
+  else
+    print_error "Artifactory authentication failed. Please try again."
     exit 1
   fi
-
-  # Verify the response contains expected npm credentials (_password + registry)
-  if ! echo "$curl_output" | grep -q "_password"; then
-    print_error "Artifactory response did not contain expected credentials."
-    print_error "Response: ${curl_output}"
-    print_error "Check your credentials and try again."
-    exit 1
-  fi
-
-  # Write to .npmrc, stripping deprecated always-auth entry
-  echo "$curl_output" | grep -v ":always-auth=" >>"$HOME/.npmrc"
-
-  # Confirm it was written
-  if ! grep -q "familysearch.jfrog.io" "$HOME/.npmrc"; then
-    print_error "Failed to write Artifactory config to ~/.npmrc"
-    exit 1
-  fi
-
-  print_done "~/.npmrc updated with Artifactory configuration"
-
-  PHASES_COMPLETED+=("Phase 5: Artifactory")
 }
 
 # =============================================================================

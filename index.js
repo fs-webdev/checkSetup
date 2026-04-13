@@ -3,19 +3,16 @@
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
-const axios = require('axios')
-const netrc = require('netrc')()
 const { execSync } = require('child_process')
 
-const { TIP, ERROR, ISSUE, WARNING, SUCCESS_MESSAGE } = require('./colorStrings')
+const { TIP, ERROR, ISSUE, SUCCESS_MESSAGE } = require('./colorStrings')
 
 const [, , privateRepo = 'zion'] = process.argv
-const rawDataGitHubUrl = `https://raw.githubusercontent.com/fs-webdev/${privateRepo}/master/package.json`
 
 const MINIMUM_RECOMMENDED_NODE_VERSION = 24
 const MINIMUM_RECOMMENDED_NPM_VERSION = 11
 
-const artifactoryUrl = '@fs:registry=https://familysearch.jfrog.io/artifactory/api/npm/fs-npm-prod-virtual/'
+const artifactoryRegistry = 'https://familysearch.jfrog.io/artifactory/api/npm/fs-npm-prod-virtual/'
 const isMacOS = process.platform === 'darwin'
 
 performAllChecks()
@@ -26,7 +23,7 @@ async function performAllChecks() {
   errorMessage += checkNpmVersion()
   errorMessage += checkNvmVersion()
   errorMessage += checkArtifactoryAccess()
-  errorMessage += await checkNetrcConfig()
+  errorMessage += await checkGitHubAccess()
   errorMessage += checkHomebrew()
   errorMessage += checkGitHubCli()
 
@@ -39,19 +36,27 @@ async function performAllChecks() {
 
 function checkArtifactoryAccess() {
   const artifactoryErrorMessage = `${ISSUE}
-      Unable to access a module published to artifactory.
+      Unable to access npm modules through artifactory.
       Follow the instructions here for more info https://www.familysearch.org/frontier/docs/getting-started/setup#setting-up-artifactory`
 
-  console.log('Checking ~/.npmrc file and npm access for @fs scoped modules')
+  console.log('Checking npm access through the Artifactory registry')
   try {
-    const npmrcFile = fs.readFileSync(path.join(os.homedir(), '.npmrc'), 'utf8')
-    if (!npmrcFile.includes(artifactoryUrl)) {
+    const registry = execSync('npm config get registry', { encoding: 'utf8' }).trim().replace(/\/$/, '')
+    const normalizedArtifactoryRegistry = artifactoryRegistry.replace(/\/$/, '')
+    if (registry !== normalizedArtifactoryRegistry) {
       return `\n${ISSUE}
-      Your npmrc file needs to be setup with the FamilySearch artifactory instance.\n${artifactoryErrorMessage}`
+      Your npm default registry must be set to the FamilySearch artifactory instance.\n${artifactoryErrorMessage}`
     }
 
-    const checkMySetupOutput = execSync('npx @fs/check-my-setup --npm-check', { encoding: 'utf8' })
-    if (!checkMySetupOutput.includes('is working great!')) {
+    const scopedAccessCheckOutput = execSync('npx @fs/check-my-setup --npm-check', { encoding: 'utf8' })
+    if (!scopedAccessCheckOutput.includes('is working great!')) {
+      return artifactoryErrorMessage
+    }
+
+    const npmAccessCheckOutput = execSync(`npm view axios version --registry=${artifactoryRegistry}`, {
+      encoding: 'utf8',
+    })
+    if (!npmAccessCheckOutput.trim()) {
       return artifactoryErrorMessage
     }
   } catch (err) {
@@ -76,44 +81,70 @@ function checkNvmVersion() {
   return ''
 }
 
-async function checkNetrcConfig() {
-  console.log('Checking ~/.netrc file and github access to fs-webdev')
-  if (Object.keys(netrc).length === 0) {
-    return `\n${ISSUE}
-    You don't appear to have a ~/.netrc file. In order to install private github dependencies, it is
-    necessary to have a correct entry in your ~/.netrc file.`
-  }
-  const githubData = netrc['github.com']
-  if (githubData === undefined) {
-    return `\n${ISSUE}
-    You don't appear to have a github.com entry in your ~/.netrc file. In order to install private github dependencies, it is
-    necessary to have a correct github.com entry in your ~/.netrc file.`
-  }
+async function checkGitHubAccess() {
+  console.log('Checking github access to fs-webdev')
 
   try {
-    const data = await axios.get(rawDataGitHubUrl, {
-      headers: {
-        Authorization: `token ${githubData.login}`,
-        Accept: 'application/vnd.github.v3+json',
-      },
+    execSync(`git ls-remote https://github.com/fs-webdev/${privateRepo}.git HEAD`, {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe']
     })
-    if (data.status !== 200) {
-      return `\n${WARNING}
-      A call to a private repo on github.com/fs-webdev did not return a status of 200. Your ~/.netrc file may not be setup correctly`
+  } catch (err) {
+    // If git ls-remote fails, diagnose which credential sources are available
+    let diagnostics = []
+
+    // Check .netrc
+    const netrcPath = path.join(os.homedir(), '.netrc')
+    if (fs.existsSync(netrcPath)) {
+      try {
+        const netrcContent = fs.readFileSync(netrcPath, 'utf8')
+        if (netrcContent.includes('github.com')) {
+          diagnostics.push('- .netrc file exists with github.com entry')
+        } else {
+          diagnostics.push('- .netrc file exists but missing github.com entry')
+        }
+      } catch (_) {
+        diagnostics.push('- .netrc file exists but cannot be read')
+      }
+    } else {
+      diagnostics.push('- .netrc file not found')
     }
 
-    if (netrc['api.github.com'] === undefined) {
-      console.log(`\n${TIP} if you ever want to use curl or similar terminal commands to hit github's API, you can add an entry into your ~/.netrc file
-      that has the same data as your github.com entry, but change the machine name to "api.github.com". Then you won't have to worry about
-      setting authentication headers or tokens in curl`)
+    // Check git credential
+    try {
+      const credentialOutput = execSync('git credential fill', {
+        encoding: 'utf8',
+        input: 'host=github.com\nprotocol=https\n',
+        stdio: ['pipe', 'pipe', 'pipe']
+      })
+      if (credentialOutput.includes('password=')) {
+        diagnostics.push('- git credential helper has github.com credentials')
+      } else {
+        diagnostics.push('- git credential helper found but no credentials')
+      }
+    } catch (_) {
+      diagnostics.push('- git credential helper not available or no credentials')
     }
-  } catch (err) {
+
     return `\n${ERROR}
-    An error occurred when trying to get data from the private repo "fs-webdev/${privateRepo}" on github.com.
-    Check the following error message, and contact frontier core if necessary:
-      ${err.message}`
+    Unable to access private GitHub repository "fs-webdev/${privateRepo}".
+
+    Current credential sources:
+    ${diagnostics.join('\n    ')}
+
+    To fix this:
+    1. Generate a GitHub personal access token: https://github.com/settings/tokens
+    2. Add it to macOS keychain: security add-internet-password -s github.com -a <username> -w <token>
+    OR
+    3. Add it to ~/.netrc:
+       machine github.com
+       login <username>
+       password <token>
+       chmod 600 ~/.netrc
+
+    Git will automatically use whichever credential source is available.`
   }
-  console.log('~/.netrc file appears valid\n')
+  console.log('GitHub access works\n')
   return ''
 }
 
