@@ -37,6 +37,8 @@ Run `source ~/.zshrc` (or open a new terminal) to apply all shell changes.
 
 ### Running the script
 
+**Important:** This script must be run in **Git Bash**, not PowerShell or Command Prompt.
+
 In Git Bash:
 
 ```bash
