@@ -4,9 +4,9 @@ A tool to check if a developer's machine is set up correctly with the tooling an
 
 ---
 
-## macSetup.sh — New Developer Onboarding
+## macSetup.sh — New User Onboarding (Mac)
 
-`macSetup.sh` is an interactive, idempotent setup script for macOS. It walks a new developer through every step needed to be productive on Frontier. **Re-running the script is safe** — completed steps are automatically detected and skipped.
+`macSetup.sh` is an interactive, idempotent setup script for macOS. It walks a new user through every step needed to be productive on Frontier if using a Mac. **Re-running the script is safe** — completed steps are automatically detected and skipped.
 
 ### Running the script
 
@@ -28,6 +28,35 @@ Walks through setting up Xcode CLT, GitHub org access, git config, nvm + Node 24
 ### After the script finishes
 
 Run `source ~/.zshrc` (or open a new terminal) to apply all shell changes.
+
+---
+
+## windowsSetup.sh — New User Onboarding (Windows)
+
+`windowsSetup.sh` is an interactive, idempotent setup script for Windows (Git Bash / MSYS2). It walks a new user through every step needed to be productive on Frontier if using a PC. **Re-running the script is safe** — completed steps are automatically detected and skipped.
+
+### Running the script
+
+In Git Bash:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/fs-webdev/checkSetup/master/windowsSetup.sh)
+```
+
+Alternatively, download and inspect before running:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/fs-webdev/checkSetup/master/windowsSetup.sh -o windowsSetup.sh
+bash windowsSetup.sh
+```
+
+### What the script does
+
+Walks through verifying Git installation, GitHub org access, git config, Node 24 (via fnm), Artifactory npm registry, the Frontier CLI (`@fs/fr-cli`), and GitHub CLI (`gh`). Some steps require browser actions (GitHub, Artifactory) and will pause so you can complete them. Windows only.
+
+### After the script finishes
+
+Restart your terminal to ensure all PATH changes take effect.
 
 ---
 
