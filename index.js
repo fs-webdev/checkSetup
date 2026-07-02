@@ -1,8 +1,5 @@
 #!/usr/bin/env node
 
-const fs = require('fs')
-const os = require('os')
-const path = require('path')
 const { execSync } = require('child_process')
 
 const { TIP, ERROR, ISSUE, SUCCESS_MESSAGE } = require('./colorStrings')
@@ -93,24 +90,20 @@ async function checkGitHubAccess() {
     // If git ls-remote fails, diagnose which credential sources are available
     let diagnostics = []
 
-    // Check .netrc
-    const netrcPath = path.join(os.homedir(), '.netrc')
-    if (fs.existsSync(netrcPath)) {
+    // Check the gh CLI — the recommended authentication path
+    try {
+      execSync('gh --version', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] })
       try {
-        const netrcContent = fs.readFileSync(netrcPath, 'utf8')
-        if (netrcContent.includes('github.com')) {
-          diagnostics.push('- .netrc file exists with github.com entry')
-        } else {
-          diagnostics.push('- .netrc file exists but missing github.com entry')
-        }
+        execSync('gh auth status', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] })
+        diagnostics.push('- gh CLI is installed and authenticated')
       } catch (_) {
-        diagnostics.push('- .netrc file exists but cannot be read')
+        diagnostics.push('- gh CLI is installed but not authenticated (run "gh auth login")')
       }
-    } else {
-      diagnostics.push('- .netrc file not found')
+    } catch (_) {
+      diagnostics.push('- gh CLI not found (install it, then run "gh auth login")')
     }
 
-    // Check git credential
+    // Check git credential helper (gh configures this via "gh auth setup-git")
     try {
       const credentialOutput = execSync('git credential fill', {
         encoding: 'utf8',
@@ -132,17 +125,12 @@ async function checkGitHubAccess() {
     Current credential sources:
     ${diagnostics.join('\n    ')}
 
-    To fix this:
-    1. Generate a GitHub personal access token: https://github.com/settings/tokens
-    2. Add it to macOS keychain: security add-internet-password -s github.com -a <username> -w <token>
-    OR
-    3. Add it to ~/.netrc:
-       machine github.com
-       login <username>
-       password <token>
-       chmod 600 ~/.netrc
+    To fix this, authenticate with the GitHub CLI:
+    1. Install the gh CLI if needed (macOS: "brew install gh")
+    2. Run "gh auth login" and choose: GitHub.com → HTTPS → authenticate Git → login with a web browser
+    3. Run "gh auth setup-git" so git uses gh for credentials
 
-    Git will automatically use whichever credential source is available.`
+    Full instructions: https://icseng.atlassian.net/wiki/spaces/DPT/pages/2352611334`
   }
   console.log('GitHub access works\n')
   return ''

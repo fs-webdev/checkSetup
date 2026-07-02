@@ -62,7 +62,7 @@ Restart your terminal to ensure all PATH changes take effect.
 
 ## checkSetup — Environment Verification Tool
 
-Checks that your machine has valid versions of Node and npm, that you're using nvm, and that `~/.netrc` and `~/.npmrc` are configured correctly (by making a test call to Artifactory and to a private `fs-webdev` GitHub repo).
+Checks that your machine has valid versions of Node and npm, that you're using nvm, and that your GitHub and Artifactory access are configured correctly — by making a test call to Artifactory and to a private `fs-webdev` GitHub repo. GitHub authentication is expected to be set up via the GitHub CLI (`gh auth login`).
 
 You'll get a green success message if everything is in order, or red error messages for any problems.
 
