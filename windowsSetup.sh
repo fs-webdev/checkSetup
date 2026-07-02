@@ -33,7 +33,6 @@ PHASES_SKIPPED=()
 
 GIT_NAME=""
 GIT_EMAIL=""
-GITHUB_TOKEN=""
 
 # =============================================================================
 # GUARDS
@@ -238,39 +237,8 @@ phase_3_git_config() {
     print_done "git url rewrite configured (git:// → https://)"
   fi
 
-  # ~/.netrc for GitHub (used by git over https on Windows)
-  local netrc="$HOME/.netrc"
-  if grep -q "machine github.com" "$netrc" 2>/dev/null; then
-    print_skip "~/.netrc already has github.com entry"
-  else
-    echo ""
-    print_info "You need a GitHub Personal Access Token (classic) to authenticate."
-    print_info "Steps:"
-    echo -e "  ${BOLD}1.${RESET} Go to ${CYAN}https://github.com/settings/tokens${RESET}"
-    echo -e "  ${BOLD}2.${RESET} Generate new token (classic)"
-    echo -e "  ${BOLD}3.${RESET} Note: 'FamilySearch Dev', No expiration, check ${BOLD}repo${RESET} scope"
-    echo -e "  ${BOLD}4.${RESET} Click 'Generate token' and copy the value"
-    echo -e "  ${BOLD}5.${RESET} Click 'Configure SSO' → Authorize for ${BOLD}fs-webdev${RESET} and ${BOLD}fs-eng${RESET}"
-    echo ""
-    print_prompt "Paste your GitHub Personal Access Token: "
-    read -r GITHUB_TOKEN
-    echo ""
-    while [[ -z "$GITHUB_TOKEN" ]]; do
-      print_warn "Token cannot be empty."
-      print_prompt "GitHub Personal Access Token: "
-      read -r GITHUB_TOKEN
-      echo ""
-    done
-
-    {
-      echo ""
-      echo "machine github.com"
-      echo "  login $GITHUB_TOKEN"
-    } >> "$netrc"
-    # Windows: chmod 600 is a best-effort; Git for Windows respects it
-    chmod 600 "$netrc" 2>/dev/null || true
-    print_done "~/.netrc updated with github.com credentials"
-  fi
+  print_info "GitHub authentication is handled by the GitHub CLI (gh) in a later phase — no"
+  print_info "personal access token or ~/.netrc file is needed."
 
   print_done "Git configuration complete"
   PHASES_COMPLETED+=("Phase 3: Git Config")
@@ -377,35 +345,80 @@ phase_6_frontier_cli() {
 }
 
 # =============================================================================
-# PHASE 7: GITHUB CLI
+# PHASE 7: GITHUB CLI & AUTHENTICATION
 # =============================================================================
 
-phase_7_github_cli() {
-  print_header "Phase 7: GitHub CLI (gh)"
-
-  if command -v gh &>/dev/null; then
-    print_skip "GitHub CLI already installed ($(gh --version 2>/dev/null | head -1))"
-    PHASES_SKIPPED+=("Phase 7: GitHub CLI")
+# Authenticate git with GitHub using the gh CLI OAuth web flow.
+# This replaces the old personal access token + ~/.netrc approach.
+gh_auth_login() {
+  if ! command -v gh &>/dev/null; then
+    print_warn "gh CLI not available — cannot authenticate with GitHub."
+    print_info "After installing gh and restarting your terminal, run 'gh auth login' manually."
     return 0
   fi
 
-  if command -v winget &>/dev/null; then
+  if gh auth status &>/dev/null; then
+    print_skip "GitHub CLI already authenticated"
+    return 0
+  fi
+
+  echo ""
+  print_info "Authenticating with GitHub via the gh CLI (OAuth web flow)."
+  print_info "A browser window will open. When prompted, choose:"
+  echo -e "        • ${BOLD}GitHub.com${RESET}"
+  echo -e "        • ${BOLD}HTTPS${RESET} for the preferred protocol"
+  echo -e "        • ${BOLD}Yes${RESET} to authenticate Git with your GitHub credentials"
+  echo -e "        • ${BOLD}Login with a web browser${RESET}, then paste the one-time code"
+  echo ""
+  print_info "Prefer SSH keys instead? See the GitHub Access guide:"
+  print_info "  ${CYAN}https://icseng.atlassian.net/wiki/spaces/DPT/pages/2352611334${RESET}"
+  echo ""
+
+  set +e
+  gh auth login --hostname github.com --git-protocol https --web
+  local login_exit=$?
+  set -e
+  if ((login_exit != 0)); then
+    print_warn "gh auth login did not complete — you can re-run 'gh auth login' at any time."
+    return 0
+  fi
+
+  # Configure gh as the git credential helper for HTTPS operations
+  gh auth setup-git 2>/dev/null || true
+
+  if gh auth status &>/dev/null; then
+    print_done "GitHub CLI authenticated"
+  else
+    print_warn "GitHub authentication not detected — run 'gh auth login' manually if git access fails."
+  fi
+}
+
+phase_7_github_cli() {
+  print_header "Phase 7: GitHub CLI (gh) & Authentication"
+
+  if command -v gh &>/dev/null; then
+    print_skip "GitHub CLI already installed ($(gh --version 2>/dev/null | head -1))"
+    PHASES_SKIPPED+=("Phase 7: GitHub CLI install")
+  elif command -v winget &>/dev/null; then
     print_step "Installing GitHub CLI via winget..."
     winget install --id GitHub.cli --silent --accept-source-agreements --accept-package-agreements --scope user
     # Reload PATH in current session
     export PATH="$PATH:/c/Program Files/GitHub CLI"
     if command -v gh &>/dev/null; then
       print_done "GitHub CLI installed ($(gh --version | head -1))"
-      PHASES_COMPLETED+=("Phase 7: GitHub CLI")
+      PHASES_COMPLETED+=("Phase 7: GitHub CLI install")
     else
-      print_warn "GitHub CLI installed but 'gh' not yet on PATH — restart your terminal after setup."
-      PHASES_COMPLETED+=("Phase 7: GitHub CLI (restart terminal to use)")
+      print_warn "GitHub CLI installed but 'gh' not yet on PATH — restart your terminal, then run 'gh auth login'."
+      PHASES_COMPLETED+=("Phase 7: GitHub CLI (restart terminal, then run 'gh auth login')")
+      return 0
     fi
   else
     print_warn "winget not available."
     print_info "Install GitHub CLI manually from: https://cli.github.com"
     pause_for_external_action "Install GitHub CLI, then press Enter" || true
   fi
+
+  gh_auth_login
 }
 
 # =============================================================================
